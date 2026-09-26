@@ -1,0 +1,183 @@
+# Neo4j: the knowledge layer for your AI agents
+
+Give your agent a knowledge graph and it can answer questions that need connected facts, such as
+source code analysis, supply chain risk, fraud detection and agent memory, and show the
+connections behind every answer.
+
+This repo has two parts:
+
+1. **[Add Neo4j to your agent](#add-neo4j-to-your-agent-about-5-minutes)**: setup commands and
+   copy-paste prompts. Your coding agent does the Neo4j work. No prior Neo4j or Cypher knowledge required.
+2. **[See why: the side-by-side demo](#see-why-the-side-by-side-demo)**: the same question answered
+   by a vector-only agent and a graph + vector agent.
+
+## Add Neo4j to your agent (about 5 minutes)
+
+Works with Claude Code, Cursor, VS Code, Codex, Gemini CLI and other agents that support MCP and
+Agent Skills.
+
+**1. Create a free database.** Go to [console.neo4j.io](https://console.neo4j.io), sign up, and
+create an **AuraDB Free** instance (no credit card). Copy its instance ID from the instance list.
+
+**2. Install the Neo4j Agent Skills** in your project folder. They teach your agent Cypher, graph
+modeling, data import, vector search, GraphRAG, agent memory and the Neo4j drivers. This is the command for the agent picker:
+
+```bash
+npx -y skills add neo4j-contrib/neo4j-skills --skill '*' --agent claude-code -y
+```
+
+Or to install all Neo4j agent skills, run: 
+
+```bash
+npx -y skills add neo4j-contrib/neo4j-skills --skill '*' --agent claude-code -y
+``` 
+
+This installs all the skills without any prompts. If you don't use Claude Code, replace `claude-code`
+with your agent: `cursor`, `codex`, `gemini-cli`, `github-copilot` (VS Code) or `windsurf`.
+
+**3. Connect your agent to your database** with the MCP server that Aura hosts for every instance.
+Replace `<INSTANCE_ID>` with your instance ID.
+
+Claude Code:
+```bash
+claude mcp add --transport http neo4j https://<INSTANCE_ID>.mcp-instances.neo4j.io
+```
+
+Cursor (`.cursor/mcp.json`):
+```json
+{ "mcpServers": { "neo4j": { "url": "https://<INSTANCE_ID>.mcp-instances.neo4j.io" } } }
+```
+
+VS Code (`.vscode/mcp.json`):
+```json
+{ "servers": { "neo4j": { "type": "http", "url": "https://<INSTANCE_ID>.mcp-instances.neo4j.io" } } }
+```
+
+For other agents, see [Neo4j's client configuration guide](https://neo4j.com/docs/mcp/current/client-configuration/).
+
+Then sign in with your Aura account. In Claude Code, type `/mcp`, select `neo4j` and choose
+**Authenticate**; other agents prompt you the first time they use the server. A browser window opens
+for the sign-in. There's nothing to install and no password in any config file. Start a new chat
+afterwards so your agent picks up the new tools.
+
+**4. Check that it works.** Ask your agent: *"Use the neo4j MCP server to show me my database schema."*
+A new database is empty, so expect an empty schema.
+
+**5. Paste a prompt** from the [`prompts/`](prompts/) folder into your agent:
+
+| Prompt | What your agent builds |
+|---|---|
+| [add-knowledge-layer.md](prompts/add-knowledge-layer.md) | A graph model of your own app's data, connected to your agent |
+| [customer-churn.md](prompts/customer-churn.md) | Which customers are at risk and why, and how much revenue a bug puts at risk |
+| [source-code-analysis.md](prompts/source-code-analysis.md) | Your codebase as a graph: what breaks if you change a function, circular imports, code owners |
+| [supply-chain.md](prompts/supply-chain.md) | Single-supplier risks and what a regional disruption affects |
+| [fraud-detection.md](prompts/fraud-detection.md) | Accounts connected to known fraud, and money moving through chains of accounts |
+| [agent-memory.md](prompts/agent-memory.md) | Long-term memory for your agent that keeps track of how facts and people connect |
+
+Each prompt has your agent propose a small graph model (and wait for your OK), load sample data or
+your own, answer example questions with the connections behind them, and connect your app's agent.
+
+**Your app's own agent:** the hosted MCP server signs in through a browser, which suits coding agents
+and chat apps. An agent running inside your product connects with the Neo4j driver instead, and
+every prompt includes that step. [`tools.py`](tools.py) in this repo is a working example.
+
+## See why: the side-by-side demo
+
+Two AI agents answer the same questions about a (fictional) SaaS company's customers:
+
+- **Vector-only agent**: can search documents by similarity.
+- **Graph + vector agent**: can do the same search, *and* query a knowledge graph.
+
+Same model, same prompt, same data, same Neo4j database, same limits. The only difference is that
+the agent on the right has two extra tools, `get_schema` and `read_cypher`: the same abilities the
+hosted MCP server gives your agent. Ask a question that needs facts connected across many records,
+and you'll see the difference.
+
+The demo is a Python app that connects to Neo4j directly, so unlike the steps above it needs
+connection details in a `.env` file.
+
+### Why the comparison is fair
+
+- Both agents call the **exact same** `search_documents` function. The graph agent just has more tools.
+- Every fact in the graph also appears in a document, so the vector-only agent has access to the
+  same information. `load_data.py` checks this and refuses to load if any fact is missing.
+- Each document is one short, self-contained chunk: the easiest case for vector search.
+- Both agents use the same Claude model, system prompt and limits.
+- One of the three demo questions is a single-customer lookup, where vector search does well.
+- The graph agent can also reach documents by following the graph (for example, every note linked
+  to one customer). That's part of what a graph adds, and it shows up in the tool calls.
+- The app shows every tool call, so you can see how each agent worked.
+
+**Stress test:** want to see the vector agent with more room? Raise the limits for both agents:
+
+```bash
+MAX_TOOL_CALLS=20 MAX_SEARCH_RESULTS=50 python check.py 2
+```
+
+**What this demo doesn't show:**
+- The baseline is plain similarity search, with no metadata filters or reranking. Those help, but
+  combining facts across records (renewal date + open tickets + contact changes) and adding up
+  numbers still means joining data in your own code.
+- The dataset is small. With 300 short documents you could fit everything in the prompt; the demo
+  stands in for a real company with thousands of customers, where you can't.
+- Questions 1 and 2 would also be answerable with SQL. The demo shows that structured, connected
+  data beats similarity search alone, not that graphs beat every database.
+
+### Setup (about 10 minutes)
+
+1. **Create a free Neo4j database** (see step 1 above) and download the credentials file Aura gives you.
+2. **Get a Claude API key** at [platform.claude.com](https://platform.claude.com).
+3. **Configure:** copy `.env.example` to `.env` and fill in the values from steps 1 and 2.
+4. **Install:**
+   ```bash
+   python -m venv .venv && source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
+5. **Load the demo data** (60 customers, 301 documents). The first run downloads a free embedding model (~440 MB):
+   ```bash
+   python load_data.py
+   ```
+6. **Run the app:**
+   ```bash
+   streamlit run app.py
+   ```
+   Or run the demo questions in the terminal: `python check.py`
+
+### Try these questions
+
+The right answers are listed here (and in the app's answer key) so you can judge both agents.
+
+**1. "Which customers are most at risk of churning before the end of the year, and why?"**
+- Globex Corporation: renews Nov 18, 3 open high-severity export tickets, and its primary contact (Maria Chen) left on Sep 2. No single document says Globex is at risk; the signals are spread across a contract, support tickets, contact records and call notes.
+- Lumen Retail: renews Oct 30 with 2 open high-severity export tickets.
+- Fathom Legal: evaluating cheaper alternatives before its Dec 10 renewal.
+- Trap: Initech *sounds* like the biggest risk (angry tickets, threatened to cancel), but signed a 3-year renewal on Sep 22.
+
+**2. "How much ARR is exposed to the CSV export timeout bug, and which customers are affected?"**
+- 11 customers, $1,223,000 ARR. Answering this means finding *every* affected customer and adding up their ARR. Similarity search returns the closest matches, not all of them.
+
+**3. "Draft a short check-in email to our main contact at Globex about the export issue."**
+- The contact is now Sam Patel (VP Operations), who replaced Maria Chen and prefers short emails. The fix is targeted for Acme 3.3 on Oct 20. This is a single-customer lookup, which vector search handles well: a check that the vector agent isn't handicapped.
+
+### How it works
+
+| File | What it does |
+|---|---|
+| `acme_data.py` | Generates the fictional company data (graph records and text documents from the same source) |
+| `load_data.py` | Loads the graph, the documents and a vector index into Neo4j |
+| `tools.py` | The three tools: `search_documents`, `get_schema`, `read_cypher` |
+| `agent.py` | The agent loop. `VECTOR_ONLY` and `GRAPH_AND_VECTOR` are the two tool lists |
+| `app.py` | The side-by-side Streamlit app, with an answer key for the demo questions |
+| `graph_view.py` | Draws the graph behind the graph agent's answer, using Neo4j's visualization library (`neo4j-viz`) |
+
+The graph:
+
+```
+(:Customer)-[:HAS_CONTRACT]->(:Contract)
+(:Customer)-[:PRIMARY_CONTACT {since, until}]->(:Person)
+(:Customer)-[:OPENED]->(:Ticket)-[:REPORTS]->(:Issue)
+(:Document)-[:ABOUT]->(:Customer)          // Document nodes hold the text and embeddings
+```
+
+**Using a different embedding model:** change the `embed()` function in `tools.py`, then reload
+with `python load_data.py --reset`.

@@ -1,0 +1,14 @@
+[server]
+# Streamlit's file watcher scans the embedding library and floods the terminal with
+# harmless tracebacks. The demo doesn't need live reload, so turn it off.
+fileWatcherType = "none"
+
+[client]
+# Hide the Deploy button and developer menu for a cleaner demo.
+toolbarMode = "viewer"
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "light"

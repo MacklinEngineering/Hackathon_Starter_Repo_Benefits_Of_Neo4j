@@ -1,0 +1,6 @@
+anthropic>=1.0
+neo4j>=5.28
+sentence-transformers>=3.0
+streamlit>=1.40
+neo4j-viz>=1.0
+python-dotenv>=1.0
