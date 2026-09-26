@@ -103,7 +103,7 @@ connection details in a `.env` file.
   same information. `load_data.py` checks this and refuses to load if any fact is missing.
 - Each document is one short, self-contained chunk: the easiest case for vector search.
 - Both agents use the same Claude model, system prompt and limits.
-- One of the three demo questions is a single-customer lookup, where vector search does well.
+- One of the demo questions is a single-customer lookup, where vector search does well.
 - The graph agent can also reach documents by following the graph (for example, every note linked
   to one customer). That's part of what a graph adds, and it shows up in the tool calls.
 - The app shows every tool call, so you can see how each agent worked.
@@ -120,7 +120,7 @@ MAX_TOOL_CALLS=20 MAX_SEARCH_RESULTS=50 python check.py 2
   numbers still means joining data in your own code.
 - The dataset is small. With 300 short documents you could fit everything in the prompt; the demo
   stands in for a real company with thousands of customers, where you can't.
-- Questions 1 and 2 would also be answerable with SQL. The demo shows that structured, connected
+- Questions 1, 2 and 4 would also be answerable with SQL. The demo shows that structured, connected
   data beats similarity search alone, not that graphs beat every database.
 
 ### Setup (about 10 minutes)
@@ -146,10 +146,14 @@ MAX_TOOL_CALLS=20 MAX_SEARCH_RESULTS=50 python check.py 2
 ### Try these questions
 
 The right answers are listed here (and in the app's answer key) so you can judge both agents.
+You don't have to take them on trust: the app's answer key recomputes each answer from the live
+database, quotes the documents every fact appears in (the same documents the vector-only agent
+searches), and shows the query so you can run it yourself in Neo4j Aura. The answers and queries
+are in [`answer_key.py`](answer_key.py).
 
 Answers change from run to run, because Claude words its searches differently each time. Ask
 question 1 a few times: the vector-only agent sometimes finds all three at-risk customers and
-sometimes only Globex. Question 2 shows the difference most reliably.
+sometimes only Globex. Questions 2 and 4 show the difference most reliably.
 
 **1. "Which customers are most at risk of churning before the end of the year, and why?"**
 - Globex Corporation: renews Nov 18, 3 open high-severity export tickets, and its primary contact (Maria Chen) left on Sep 2. No single document says Globex is at risk; the signals are spread across a contract, support tickets, contact records and call notes.
@@ -164,6 +168,10 @@ sometimes only Globex. Question 2 shows the difference most reliably.
 **3. "Draft a short check-in email to our main contact at Globex about the export issue."**
 - The contact is now Sam Patel (VP Operations), who replaced Maria Chen and prefers short emails. The fix is targeted for Acme 3.3 on Oct 20. This is a single-customer lookup, which vector search handles well: a check that the vector agent isn't handicapped.
 
+**4. "Which customers renew this year before a fix ships for a bug they reported?"**
+- 4 customers, $466,000 ARR: Amberline Shipping (renews Oct 13), Eastlake Water District (Oct 20), Lantern Nonprofit Network (Nov 1) and Meridian Freight (Dec 9). Each has an open ticket about a bug with no fix date. Answering this means comparing each bug's fix date with each affected customer's renewal date, across every ticket.
+- Trap: Globex and Lumen Retail have the loudest bug (CSV export timeouts), but its fix ships Oct 20, before both renewals.
+
 ### How it works
 
 | File | What it does |
@@ -172,8 +180,10 @@ sometimes only Globex. Question 2 shows the difference most reliably.
 | `load_data.py` | Loads the graph, the documents and a vector index into Neo4j |
 | `tools.py` | The three tools: `search_documents`, `get_schema`, `read_cypher` |
 | `agent.py` | The agent loop. `VECTOR_ONLY` and `GRAPH_AND_VECTOR` are the two tool lists |
-| `app.py` | The side-by-side Streamlit app, with an answer key for the demo questions |
+| `app.py` | The side-by-side Streamlit app |
+| `answer_key.py` | The right answer to each demo question, and the query that proves it from the live data |
 | `graph_view.py` | Draws the graph behind the graph agent's answer, using Neo4j's visualization library (`neo4j-viz`) |
+| `.streamlit/config.toml`, `assets/` | The app's Neo4j colors, fonts and logo |
 
 The graph:
 

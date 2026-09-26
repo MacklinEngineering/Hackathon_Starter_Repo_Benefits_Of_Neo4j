@@ -7,11 +7,13 @@ import json
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import streamlit as st
 import streamlit.components.v1 as components
 
 from agent import DEMO_QUESTIONS, GRAPH_AND_VECTOR, MAX_TOOL_CALLS, VECTOR_ONLY, run_agent
+from answer_key import ANSWER_KEY, run_proof
 from graph_view import evidence_html
 from tools import MAX_SEARCH_RESULTS, embed
 
@@ -20,24 +22,11 @@ AGENTS = {
     "graph": ("Graph + vector agent", GRAPH_AND_VECTOR),
 }
 
-# The right answers, taken straight from the data, so viewers can judge both agents themselves.
-ANSWER_KEY = {
-    DEMO_QUESTIONS[0]: """
-- **Globex Corporation** ($240K): renews Nov 18, 3 open high-severity export tickets, and its primary contact Maria Chen left on Sep 2.
-- **Lumen Retail** ($180K): renews Oct 30, 2 open high-severity export tickets.
-- **Fathom Legal** ($72K): evaluating cheaper alternatives before its Dec 10 renewal.
-- Not at risk: **Initech** sounds angry but signed a 3-year renewal on Sep 22.
-- Not at risk this year: **Cobalt Dental** is unhappy with onboarding, but doesn't renew until Jun 15, 2027.""",
-    DEMO_QUESTIONS[1]: """
-**$1,223,000 ARR across 11 customers:** Globex Corporation, Orchard Foods, Lumen Retail, Fieldstone Storage,
-Falcon Courier, Keystone Builders, Umber Coffee Roasters, Riverbend Hospital, Jetty Marine, Alder Legal Group,
-Bluefin Logistics.""",
-    DEMO_QUESTIONS[2]: """
-The main contact is now **Sam Patel** (VP Operations), who replaced Maria Chen on Sep 8 and prefers short emails.
-The fix is targeted for Acme 3.3 on **Oct 20**; the workaround is splitting exports by date range.""",
-}
+ASSETS = Path(__file__).parent / "assets"
 
-st.set_page_config(page_title="Vector vs. Graph + Vector", layout="wide")
+st.set_page_config(page_title="Vector vs. Graph + Vector", page_icon=str(ASSETS / "neo4j-icon.png"),
+                   layout="wide")
+st.logo(str(ASSETS / "neo4j-logo.svg"), size="large", link="https://neo4j.com")
 st.title("Does your agent need a knowledge graph?")
 st.caption(
     "Two agents with the same model, prompt, data and Neo4j database, and the same limits "
@@ -136,6 +125,20 @@ for key, result in st.session_state.get("results", {}).items():
 answer_key = ANSWER_KEY.get(st.session_state.get("results_question"))
 if answer_key and st.session_state.get("results"):
     with st.expander("Answer key: the right answer, from the data"):
-        st.markdown(answer_key)
+        st.markdown(answer_key["answer"])
         st.caption("The agents' answers can change from run to run: Claude words its searches "
                    "differently each time, and each search returns only the closest matches.")
+        st.markdown("**Check it yourself.** This table was recomputed just now from the live database. "
+                    "The *(source)* columns quote the documents each fact appears in: the same documents "
+                    "the vector-only agent searches.")
+        try:
+            rows = run_proof(st.session_state.results_question)
+            st.table([{k: " ".join(f"• {x}" for x in v) if isinstance(v, list) else v for k, v in row.items()}
+                      for row in rows], hide_index=True, border="horizontal")
+            if total := answer_key.get("total"):
+                st.markdown(f"**Total {total}: ${sum(r[total] for r in rows):,} "
+                            f"across {len(rows)} customers**")
+        except Exception as e:
+            st.warning(f"Couldn't recompute the answer: {e}")
+        st.caption("The query behind the table. Paste it into the Query tool in Neo4j Aura to run it yourself.")
+        st.code(answer_key["proof"].strip(), language="cypher")

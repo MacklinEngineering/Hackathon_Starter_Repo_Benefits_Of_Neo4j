@@ -24,6 +24,7 @@ DEMO_QUESTIONS = [
     "Which customers are most at risk of churning before the end of the year, and why?",
     "How much ARR is exposed to the CSV export timeout bug, and which customers are affected?",
     "Draft a short check-in email to our main contact at Globex about the export issue.",
+    "Which customers renew this year before a fix ships for a bug they reported?",
 ]
 
 SYSTEM_PROMPT = f"""You are the customer success assistant at Acme Analytics, a B2B analytics \
@@ -92,4 +93,6 @@ def run_agent(question: str, tool_names: list[str], on_step=None) -> dict:
         answer = "The request was declined."
     else:
         answer = "".join(block.text for block in response.content if block.type == "text")
+    if not answer.strip():  # Rare, but say so rather than show an empty answer.
+        answer = f"_No answer returned (stop reason: {response.stop_reason})._"
     return {"answer": answer, "steps": steps, "seconds": round(time.time() - started, 1)}

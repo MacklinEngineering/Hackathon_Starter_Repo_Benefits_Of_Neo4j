@@ -12,3 +12,14 @@ gatherUsageStats = false
 
 [theme]
 base = "light"
+# Neo4j brand colors and fonts, from Neo4j's Needle design system (neo4j.design).
+primaryColor = "#0A6190"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F6F6"
+textColor = "#1A1B1D"
+borderColor = "#E2E3E5"
+linkColor = "#0A6190"
+font = "'Public Sans':https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap"
+headingFont = "Syne:https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700&display=swap"
+headingFontWeights = 600
+codeFont = "'Fira Code':https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap"
