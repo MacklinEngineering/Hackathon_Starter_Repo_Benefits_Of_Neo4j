@@ -26,7 +26,8 @@ ANSWER_KEY = {
 - **Globex Corporation** ($240K): renews Nov 18, 3 open high-severity export tickets, and its primary contact Maria Chen left on Sep 2.
 - **Lumen Retail** ($180K): renews Oct 30, 2 open high-severity export tickets.
 - **Fathom Legal** ($72K): evaluating cheaper alternatives before its Dec 10 renewal.
-- Not at risk: **Initech** sounds angry but signed a 3-year renewal on Sep 22.""",
+- Not at risk: **Initech** sounds angry but signed a 3-year renewal on Sep 22.
+- Not at risk this year: **Cobalt Dental** is unhappy with onboarding, but doesn't renew until Jun 15, 2027.""",
     DEMO_QUESTIONS[1]: """
 **$1,223,000 ARR across 11 customers:** Globex Corporation, Orchard Foods, Lumen Retail, Fieldstone Storage,
 Falcon Courier, Keystone Builders, Umber Coffee Roasters, Riverbend Hospital, Jetty Marine, Alder Legal Group,
@@ -136,3 +137,5 @@ answer_key = ANSWER_KEY.get(st.session_state.get("results_question"))
 if answer_key and st.session_state.get("results"):
     with st.expander("Answer key: the right answer, from the data"):
         st.markdown(answer_key)
+        st.caption("The agents' answers can change from run to run: Claude words its searches "
+                   "differently each time, and each search returns only the closest matches.")

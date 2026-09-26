@@ -147,11 +147,16 @@ MAX_TOOL_CALLS=20 MAX_SEARCH_RESULTS=50 python check.py 2
 
 The right answers are listed here (and in the app's answer key) so you can judge both agents.
 
+Answers change from run to run, because Claude words its searches differently each time. Ask
+question 1 a few times: the vector-only agent sometimes finds all three at-risk customers and
+sometimes only Globex. Question 2 shows the difference most reliably.
+
 **1. "Which customers are most at risk of churning before the end of the year, and why?"**
 - Globex Corporation: renews Nov 18, 3 open high-severity export tickets, and its primary contact (Maria Chen) left on Sep 2. No single document says Globex is at risk; the signals are spread across a contract, support tickets, contact records and call notes.
 - Lumen Retail: renews Oct 30 with 2 open high-severity export tickets.
 - Fathom Legal: evaluating cheaper alternatives before its Dec 10 renewal.
 - Trap: Initech *sounds* like the biggest risk (angry tickets, threatened to cancel), but signed a 3-year renewal on Sep 22.
+- Trap: Cobalt Dental is unhappy with onboarding and "may reconsider Acme", but doesn't renew until Jun 15, 2027.
 
 **2. "How much ARR is exposed to the CSV export timeout bug, and which customers are affected?"**
 - 11 customers, $1,223,000 ARR. Answering this means finding *every* affected customer and adding up their ARR. Similarity search returns the closest matches, not all of them.

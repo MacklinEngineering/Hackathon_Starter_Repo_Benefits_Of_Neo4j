@@ -75,6 +75,8 @@ def run_agent(question: str, tool_names: list[str], on_step=None) -> dict:
                 output, is_error = "Tool call limit reached. Answer with what you have.", True
             else:
                 try:
+                    if block.name not in tool_names:  # Only run the tools this agent was given.
+                        raise ValueError(f"{block.name} isn't one of your tools")
                     output, is_error = TOOLS[block.name]["function"](**block.input), False
                 except Exception as e:  # Show the error to Claude so it can fix its query.
                     output, is_error = f"Error: {e}", True
