@@ -13,50 +13,6 @@ from tools import DATABASE, get_driver
 ANSWER_KEY = {
     DEMO_QUESTIONS[0]: {
         "answer": """
-- **Globex Corporation** ($240K): renews Nov 18, 3 open high-severity export tickets, and its primary contact Maria Chen left on Sep 2.
-- **Lumen Retail** ($180K): renews Oct 30, 2 open high-severity export tickets.
-- **Fathom Legal** ($72K): evaluating cheaper alternatives before its Dec 10 renewal.
-- Not at risk: **Initech** sounds angry but signed a 3-year renewal on Sep 22.
-- Not at risk this year: **Cobalt Dental** is unhappy with onboarding, but doesn't renew until Jun 15, 2027.""",
-        "proof": r"""
-// Every contract that renews before the end of the year, with each churn signal
-MATCH (c:Customer)-[:HAS_CONTRACT]->(k:Contract)
-WHERE date('2026-09-29') <= k.renewal_date <= date('2026-12-31')
-MATCH (kd:Document) WHERE kd.text STARTS WITH 'Contract ' + k.id + ':'
-OPTIONAL MATCH (c)-[:OPENED]->(t:Ticket {status: 'open', severity: 'high'})
-WITH c, k, kd, collect(t.id) AS tickets
-OPTIONAL MATCH (c)-[r:PRIMARY_CONTACT]->(p:Person) WHERE r.until >= date('2026-07-01')
-WITH c, k, kd, tickets, collect(p.name + ' left ' + toString(r.until)) AS contacts
-OPTIONAL MATCH (n:Document {type: 'note'})-[:ABOUT]->(c) WHERE n.date >= date('2026-08-15')
-WITH c, k, kd, tickets, contacts, collect(n.id + ': ' + n.text) AS notes
-RETURN c.name AS customer, toString(k.renewal_date) AS renews,
-       tickets AS `open high-severity tickets`, contacts AS `contact left since July`,
-       notes AS `notes since Aug 15`,
-       kd.id + ': ' + [l IN split(kd.text, '\n') WHERE l STARTS WITH 'Term:'][0] + ' | '
-         + [l IN split(kd.text, '\n') WHERE l STARTS WITH 'Contract status:'][0] AS `contract (source)`
-ORDER BY size(tickets) + size(contacts) + size(notes) DESC, k.renewal_date""",
-    },
-    DEMO_QUESTIONS[1]: {
-        "answer": """
-**$1,223,000 ARR across 11 customers:** Globex Corporation, Orchard Foods, Lumen Retail, Fieldstone Storage,
-Falcon Courier, Keystone Builders, Umber Coffee Roasters, Riverbend Hospital, Jetty Marine, Alder Legal Group,
-Bluefin Logistics.""",
-        "total": "ARR",
-        "proof": r"""
-// Every customer with a ticket about the CSV export bug (ISSUE-311), and their ARR
-MATCH (:Issue {id: 'ISSUE-311'})<-[:REPORTS]-(t:Ticket)<-[:OPENED]-(c:Customer)
-MATCH (c)-[:HAS_CONTRACT]->(k:Contract {status: 'active'})
-MATCH (kd:Document) WHERE kd.text STARTS WITH 'Contract ' + k.id + ':'
-MATCH (td:Document) WHERE td.title STARTS WITH 'Support ticket ' + t.id + ':'
-WITH c, kd, collect(td.id + ': ' + [l IN split(td.text, '\n')
-                   WHERE l STARTS WITH 'Linked engineering issue'][0]) AS tickets
-RETURN c.name AS customer, c.arr AS ARR,
-       kd.id + ': ' + [l IN split(kd.text, '\n') WHERE l STARTS WITH 'Annual'][0] AS `ARR (source)`,
-       tickets AS `tickets about the bug (source)`
-ORDER BY ARR DESC""",
-    },
-    DEMO_QUESTIONS[2]: {
-        "answer": """
 The main contact is now **Sam Patel** (VP Operations), who replaced Maria Chen on Sep 8 and prefers short emails.
 The fix is targeted for Acme 3.3 on **Oct 20**; the workaround is splitting exports by date range.""",
         "proof": r"""
@@ -78,7 +34,26 @@ WHERE d.text CONTAINS 'ISSUE-311' AND d.text CONTAINS 'targeted'
 RETURN 'When the export fix ships' AS fact, 'fix_target ' + toString(i.fix_target) AS `in the graph`,
        d.id + ': ' + d.text AS source""",
     },
-    DEMO_QUESTIONS[3]: {
+    DEMO_QUESTIONS[1]: {
+        "answer": """
+**$1,223,000 ARR across 11 customers:** Globex Corporation, Orchard Foods, Lumen Retail, Fieldstone Storage,
+Falcon Courier, Keystone Builders, Umber Coffee Roasters, Riverbend Hospital, Jetty Marine, Alder Legal Group,
+Bluefin Logistics.""",
+        "total": "ARR",
+        "proof": r"""
+// Every customer with a ticket about the CSV export bug (ISSUE-311), and their ARR
+MATCH (:Issue {id: 'ISSUE-311'})<-[:REPORTS]-(t:Ticket)<-[:OPENED]-(c:Customer)
+MATCH (c)-[:HAS_CONTRACT]->(k:Contract {status: 'active'})
+MATCH (kd:Document) WHERE kd.text STARTS WITH 'Contract ' + k.id + ':'
+MATCH (td:Document) WHERE td.title STARTS WITH 'Support ticket ' + t.id + ':'
+WITH c, kd, collect(td.id + ': ' + [l IN split(td.text, '\n')
+                   WHERE l STARTS WITH 'Linked engineering issue'][0]) AS tickets
+RETURN c.name AS customer, c.arr AS ARR,
+       kd.id + ': ' + [l IN split(kd.text, '\n') WHERE l STARTS WITH 'Annual'][0] AS `ARR (source)`,
+       tickets AS `tickets about the bug (source)`
+ORDER BY ARR DESC""",
+    },
+    DEMO_QUESTIONS[2]: {
         "answer": """
 **4 customers, $466,000 ARR.** Each has an open ticket about a bug with no fix date, and renews before the end of the year:
 - **Amberline Shipping** ($70K): renews Oct 13; waiting on the late alert emails bug (ISSUE-320).

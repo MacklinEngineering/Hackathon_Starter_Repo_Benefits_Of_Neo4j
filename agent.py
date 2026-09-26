@@ -21,9 +21,8 @@ VECTOR_ONLY = ["search_documents"]
 GRAPH_AND_VECTOR = ["search_documents", "get_schema", "read_cypher"]
 
 DEMO_QUESTIONS = [
-    "Which customers are most at risk of churning before the end of the year, and why?",
-    "How much ARR is exposed to the CSV export timeout bug, and which customers are affected?",
     "Draft a short check-in email to our main contact at Globex about the export issue.",
+    "How much ARR is exposed to the CSV export timeout bug, and which customers are affected?",
     "Which customers renew this year before a fix ships for a bug they reported?",
 ]
 

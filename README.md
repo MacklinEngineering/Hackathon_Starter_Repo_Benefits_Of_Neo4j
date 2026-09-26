@@ -20,20 +20,21 @@ Agent Skills.
 create an **AuraDB Free** instance (no credit card). Copy its instance ID from the instance list.
 
 **2. Install the Neo4j Agent Skills** in your project folder. They teach your agent Cypher, graph
-modeling, data import, vector search, GraphRAG, agent memory and the Neo4j drivers. This is the command for the agent picker:
+modeling, data import, vector search, GraphRAG, agent memory and the Neo4j drivers. To pick the
+skills and your agent from a menu, run:
+
+```bash
+npx -y skills add neo4j-contrib/neo4j-skills
+```
+
+Or install all the skills for Claude Code without any prompts:
 
 ```bash
 npx -y skills add neo4j-contrib/neo4j-skills --skill '*' --agent claude-code -y
 ```
 
-Or to install all Neo4j agent skills, run: 
-
-```bash
-npx -y skills add neo4j-contrib/neo4j-skills --skill '*' --agent claude-code -y
-``` 
-
-This installs all the skills without any prompts. If you don't use Claude Code, replace `claude-code`
-with your agent: `cursor`, `codex`, `gemini-cli`, `github-copilot` (VS Code) or `windsurf`.
+If you don't use Claude Code, replace `claude-code` with your agent: `cursor`, `codex`,
+`gemini-cli`, `github-copilot` (VS Code) or `windsurf`.
 
 **3. Connect your agent to your database** with the MCP server that Aura hosts for every instance.
 Replace `<INSTANCE_ID>` with your instance ID.
@@ -103,6 +104,7 @@ connection details in a `.env` file.
   same information. `load_data.py` checks this and refuses to load if any fact is missing.
 - Each document is one short, self-contained chunk: the easiest case for vector search.
 - Both agents use the same Claude model, system prompt and limits.
+- Each agent can only run the tools it was given: `run_agent` refuses a call to any other tool.
 - One of the demo questions is a single-customer lookup, where vector search does well.
 - The graph agent can also reach documents by following the graph (for example, every note linked
   to one customer). That's part of what a graph adds, and it shows up in the tool calls.
@@ -116,11 +118,11 @@ MAX_TOOL_CALLS=20 MAX_SEARCH_RESULTS=50 python check.py 2
 
 **What this demo doesn't show:**
 - The baseline is plain similarity search, with no metadata filters or reranking. Those help, but
-  combining facts across records (renewal date + open tickets + contact changes) and adding up
-  numbers still means joining data in your own code.
-- The dataset is small. With 300 short documents you could fit everything in the prompt; the demo
+  combining facts across records (renewal dates + fix dates + the tickets that link them) and
+  adding up numbers still means joining data in your own code.
+- The dataset is small. With about 300 short documents you could fit everything in the prompt; the demo
   stands in for a real company with thousands of customers, where you can't.
-- Questions 1, 2 and 4 would also be answerable with SQL. The demo shows that structured, connected
+- Questions 2 and 3 would also be answerable with SQL. The demo shows that structured, connected
   data beats similarity search alone, not that graphs beat every database.
 
 ### Setup (about 10 minutes)
@@ -151,24 +153,16 @@ database, quotes the documents every fact appears in (the same documents the vec
 searches), and shows the query so you can run it yourself in Neo4j Aura. The answers and queries
 are in [`answer_key.py`](answer_key.py).
 
-Answers change from run to run, because Claude words its searches differently each time. Ask
-question 1 a few times: the vector-only agent sometimes finds all three at-risk customers and
-sometimes only Globex. Questions 2 and 4 show the difference most reliably.
+Answers change from run to run, because Claude words its searches differently each time, so
+it's worth asking a question more than once.
 
-**1. "Which customers are most at risk of churning before the end of the year, and why?"**
-- Globex Corporation: renews Nov 18, 3 open high-severity export tickets, and its primary contact (Maria Chen) left on Sep 2. No single document says Globex is at risk; the signals are spread across a contract, support tickets, contact records and call notes.
-- Lumen Retail: renews Oct 30 with 2 open high-severity export tickets.
-- Fathom Legal: evaluating cheaper alternatives before its Dec 10 renewal.
-- Trap: Initech *sounds* like the biggest risk (angry tickets, threatened to cancel), but signed a 3-year renewal on Sep 22.
-- Trap: Cobalt Dental is unhappy with onboarding and "may reconsider Acme", but doesn't renew until Jun 15, 2027.
+**1. "Draft a short check-in email to our main contact at Globex about the export issue."**
+- The contact is now Sam Patel (VP Operations), who replaced Maria Chen and prefers short emails. The fix is targeted for Acme 3.3 on Oct 20. This is a single-customer lookup, which vector search handles well: a check that the vector agent isn't handicapped.
 
 **2. "How much ARR is exposed to the CSV export timeout bug, and which customers are affected?"**
 - 11 customers, $1,223,000 ARR. Answering this means finding *every* affected customer and adding up their ARR. Similarity search returns the closest matches, not all of them.
 
-**3. "Draft a short check-in email to our main contact at Globex about the export issue."**
-- The contact is now Sam Patel (VP Operations), who replaced Maria Chen and prefers short emails. The fix is targeted for Acme 3.3 on Oct 20. This is a single-customer lookup, which vector search handles well: a check that the vector agent isn't handicapped.
-
-**4. "Which customers renew this year before a fix ships for a bug they reported?"**
+**3. "Which customers renew this year before a fix ships for a bug they reported?"**
 - 4 customers, $466,000 ARR: Amberline Shipping (renews Oct 13), Eastlake Water District (Oct 20), Lantern Nonprofit Network (Nov 1) and Meridian Freight (Dec 9). Each has an open ticket about a bug with no fix date. Answering this means comparing each bug's fix date with each affected customer's renewal date, across every ticket.
 - Trap: Globex and Lumen Retail have the loudest bug (CSV export timeouts), but its fix ships Oct 20, before both renewals.
 
@@ -181,6 +175,7 @@ sometimes only Globex. Questions 2 and 4 show the difference most reliably.
 | `tools.py` | The three tools: `search_documents`, `get_schema`, `read_cypher` |
 | `agent.py` | The agent loop. `VECTOR_ONLY` and `GRAPH_AND_VECTOR` are the two tool lists |
 | `app.py` | The side-by-side Streamlit app |
+| `check.py` | Runs the demo questions through both agents in the terminal |
 | `answer_key.py` | The right answer to each demo question, and the query that proves it from the live data |
 | `graph_view.py` | Draws the graph behind the graph agent's answer, using Neo4j's visualization library (`neo4j-viz`) |
 | `.streamlit/config.toml`, `assets/` | The app's Neo4j colors, fonts and logo |
@@ -194,5 +189,6 @@ The graph:
 (:Document)-[:ABOUT]->(:Customer)          // Document nodes hold the text and embeddings
 ```
 
-**Using a different embedding model:** change the `embed()` function in `tools.py`, then reload
-with `python load_data.py --reset`.
+**Using a different embedding model:** in `tools.py`, change the `embed()` function, set
+`EMBEDDING_DIMENSIONS` to your model's vector size, and set `QUERY_PREFIX` to `""` unless your model
+expects one. Then reload with `python load_data.py --reset`.
